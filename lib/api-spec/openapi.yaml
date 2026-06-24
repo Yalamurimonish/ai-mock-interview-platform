@@ -1,0 +1,790 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: AI Mock Interview Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: resumes
+    description: Resume management
+  - name: interviews
+    description: Interview sessions
+  - name: questions
+    description: Interview questions
+  - name: analytics
+    description: Progress analytics
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # Auth
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  # Users
+  /users/profile:
+    patch:
+      operationId: updateProfile
+      tags: [users]
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/stats:
+    get:
+      operationId: getUserStats
+      tags: [users]
+      summary: Get user dashboard stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStats"
+
+  # Resumes
+  /resumes:
+    get:
+      operationId: listResumes
+      tags: [resumes]
+      summary: List user's resumes
+      responses:
+        "200":
+          description: Resume list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resume"
+    post:
+      operationId: uploadResume
+      tags: [resumes]
+      summary: Upload a resume
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeInput"
+      responses:
+        "201":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+
+  /resumes/{id}:
+    get:
+      operationId: getResume
+      tags: [resumes]
+      summary: Get a resume
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resume
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resume"
+    delete:
+      operationId: deleteResume
+      tags: [resumes]
+      summary: Delete a resume
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Interviews
+  /interviews:
+    get:
+      operationId: listInterviews
+      tags: [interviews]
+      summary: List interviews
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed]
+      responses:
+        "200":
+          description: Interview list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Interview"
+    post:
+      operationId: createInterview
+      tags: [interviews]
+      summary: Create a new interview session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+
+  /interviews/recent:
+    get:
+      operationId: listRecentInterviews
+      tags: [interviews]
+      summary: Get recent interview sessions
+      responses:
+        "200":
+          description: Recent interviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Interview"
+
+  /interviews/{id}:
+    get:
+      operationId: getInterview
+      tags: [interviews]
+      summary: Get interview details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Interview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+    delete:
+      operationId: deleteInterview
+      tags: [interviews]
+      summary: Delete an interview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /interviews/{id}/start:
+    post:
+      operationId: startInterview
+      tags: [interviews]
+      summary: Start an interview session
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+
+  /interviews/{id}/complete:
+    post:
+      operationId: completeInterview
+      tags: [interviews]
+      summary: Mark interview as complete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interview"
+
+  /interviews/{id}/analysis:
+    get:
+      operationId: getInterviewAnalysis
+      tags: [interviews]
+      summary: Get AI analysis for a completed interview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewAnalysis"
+
+  # Questions & Answers
+  /interviews/{id}/questions:
+    get:
+      operationId: listInterviewQuestions
+      tags: [questions]
+      summary: List questions for an interview
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Questions list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Question"
+
+  /interviews/{id}/answer:
+    post:
+      operationId: submitAnswer
+      tags: [questions]
+      summary: Submit an answer to a question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnswerInput"
+      responses:
+        "200":
+          description: Answer evaluated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResult"
+
+  /interviews/{id}/next-question:
+    post:
+      operationId: getNextQuestion
+      tags: [questions]
+      summary: Get next AI-generated question
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Next question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+
+  # Analytics
+  /analytics/overview:
+    get:
+      operationId: getAnalyticsOverview
+      tags: [analytics]
+      summary: Get overall performance overview
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyticsOverview"
+
+  /analytics/scores:
+    get:
+      operationId: getScoreTrend
+      tags: [analytics]
+      summary: Get score trend over time
+      parameters:
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Score trend
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScorePoint"
+
+  /analytics/skills:
+    get:
+      operationId: getSkillBreakdown
+      tags: [analytics]
+      summary: Get skill-level breakdown
+      responses:
+        "200":
+          description: Skill breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SkillScore"
+
+  /analytics/categories:
+    get:
+      operationId: getCategoryBreakdown
+      tags: [analytics]
+      summary: Get performance by interview category
+      responses:
+        "200":
+          description: Category breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryScore"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    # Auth
+    RegisterInput:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    # Users
+    User:
+      type: object
+      required: [id, name, email, role, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        avatarUrl:
+          type: ["string", "null"]
+        targetRole:
+          type: ["string", "null"]
+        experienceLevel:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        avatarUrl:
+          type: string
+        targetRole:
+          type: string
+        experienceLevel:
+          type: string
+
+    UserStats:
+      type: object
+      required: [totalInterviews, completedInterviews, averageScore, currentStreak, totalHours]
+      properties:
+        totalInterviews:
+          type: integer
+        completedInterviews:
+          type: integer
+        averageScore:
+          type: number
+        currentStreak:
+          type: integer
+        totalHours:
+          type: number
+        bestScore:
+          type: ["number", "null"]
+        recentImprovement:
+          type: ["number", "null"]
+
+    # Resumes
+    Resume:
+      type: object
+      required: [id, userId, filename, uploadedAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        filename:
+          type: string
+        content:
+          type: ["string", "null"]
+        parsedSkills:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        uploadedAt:
+          type: string
+
+    ResumeInput:
+      type: object
+      required: [filename, content]
+      properties:
+        filename:
+          type: string
+        content:
+          type: string
+
+    # Interviews
+    Interview:
+      type: object
+      required: [id, userId, title, type, difficulty, status, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        title:
+          type: string
+        type:
+          type: string
+          enum: [technical, behavioral, system_design, mixed]
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        status:
+          type: string
+          enum: [pending, in_progress, completed]
+        targetRole:
+          type: ["string", "null"]
+        overallScore:
+          type: ["number", "null"]
+        durationMinutes:
+          type: ["integer", "null"]
+        questionCount:
+          type: integer
+        answeredCount:
+          type: integer
+        resumeId:
+          type: ["integer", "null"]
+        startedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    InterviewInput:
+      type: object
+      required: [title, type, difficulty]
+      properties:
+        title:
+          type: string
+        type:
+          type: string
+          enum: [technical, behavioral, system_design, mixed]
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        targetRole:
+          type: string
+        questionCount:
+          type: integer
+        resumeId:
+          type: integer
+
+    InterviewAnalysis:
+      type: object
+      required: [interviewId, overallScore, summary, strengths, improvements, skillScores]
+      properties:
+        interviewId:
+          type: integer
+        overallScore:
+          type: number
+        summary:
+          type: string
+        strengths:
+          type: array
+          items:
+            type: string
+        improvements:
+          type: array
+          items:
+            type: string
+        skillScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillScore"
+        detailedFeedback:
+          type: ["string", "null"]
+
+    # Questions
+    Question:
+      type: object
+      required: [id, interviewId, text, type, orderIndex]
+      properties:
+        id:
+          type: integer
+        interviewId:
+          type: integer
+        text:
+          type: string
+        type:
+          type: string
+          enum: [technical, behavioral, situational, coding]
+        orderIndex:
+          type: integer
+        hint:
+          type: ["string", "null"]
+        userAnswer:
+          type: ["string", "null"]
+        score:
+          type: ["number", "null"]
+        feedback:
+          type: ["string", "null"]
+        isAnswered:
+          type: boolean
+
+    AnswerInput:
+      type: object
+      required: [questionId, answer]
+      properties:
+        questionId:
+          type: integer
+        answer:
+          type: string
+
+    AnswerResult:
+      type: object
+      required: [questionId, score, feedback]
+      properties:
+        questionId:
+          type: integer
+        score:
+          type: number
+        feedback:
+          type: string
+        strengths:
+          type: array
+          items:
+            type: string
+        improvements:
+          type: array
+          items:
+            type: string
+
+    # Analytics
+    AnalyticsOverview:
+      type: object
+      required: [totalInterviews, averageScore, completionRate, topSkill, weakestSkill]
+      properties:
+        totalInterviews:
+          type: integer
+        averageScore:
+          type: number
+        completionRate:
+          type: number
+        topSkill:
+          type: string
+        weakestSkill:
+          type: string
+        scoreThisWeek:
+          type: ["number", "null"]
+        scoreLastWeek:
+          type: ["number", "null"]
+
+    ScorePoint:
+      type: object
+      required: [date, score]
+      properties:
+        date:
+          type: string
+        score:
+          type: number
+        interviewId:
+          type: ["integer", "null"]
+
+    SkillScore:
+      type: object
+      required: [skill, score, maxScore]
+      properties:
+        skill:
+          type: string
+        score:
+          type: number
+        maxScore:
+          type: number
+
+    CategoryScore:
+      type: object
+      required: [category, averageScore, count]
+      properties:
+        category:
+          type: string
+        averageScore:
+          type: number
+        count:
+          type: integer
