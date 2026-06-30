@@ -116,6 +116,12 @@ function serializeInterview(i: typeof interviewsTable.$inferSelect) {
 }
 
 router.get("/interviews", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({
+    error: "Database is not configured",
+  });
+  return;
+}
   const user = getUser(req);
   const queryParams = ListInterviewsQueryParams.safeParse(req.query);
 
@@ -151,6 +157,10 @@ router.get("/interviews/recent", requireAuth, async (req, res): Promise<void> =>
 });
 
 router.post("/interviews", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const parsed = CreateInterviewBody.safeParse(req.body);
   if (!parsed.success) {
@@ -179,6 +189,10 @@ router.post("/interviews", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/interviews/:id", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const params = GetInterviewParams.safeParse(req.params);
   if (!params.success) {
@@ -200,11 +214,15 @@ router.get("/interviews/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.delete("/interviews/:id", requireAuth, async (req, res): Promise<void> => {
+
   const user = getUser(req);
   const params = DeleteInterviewParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
-    return;
+    return;if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   }
 
   const [interview] = await db
@@ -221,6 +239,10 @@ router.delete("/interviews/:id", requireAuth, async (req, res): Promise<void> =>
 });
 
 router.post("/interviews/:id/start", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const params = StartInterviewParams.safeParse(req.params);
   if (!params.success) {
@@ -290,6 +312,10 @@ router.post("/interviews/:id/start", requireAuth, async (req, res): Promise<void
 });
 
 router.post("/interviews/:id/complete", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const params = CompleteInterviewParams.safeParse(req.params);
   if (!params.success) {
@@ -347,6 +373,10 @@ router.post("/interviews/:id/complete", requireAuth, async (req, res): Promise<v
 });
 
 router.get("/interviews/:id/analysis", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const params = GetInterviewAnalysisParams.safeParse(req.params);
   if (!params.success) {
@@ -387,6 +417,10 @@ router.get("/interviews/:id/analysis", requireAuth, async (req, res): Promise<vo
 
 // Questions
 router.get("/interviews/:id/questions", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const params = ListInterviewQuestionsParams.safeParse(req.params);
   if (!params.success) {
@@ -414,6 +448,10 @@ router.get("/interviews/:id/questions", requireAuth, async (req, res): Promise<v
 });
 
 router.post("/interviews/:id/answer", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const params = SubmitAnswerParams.safeParse(req.params);
   if (!params.success) {
@@ -487,6 +525,10 @@ router.post("/interviews/:id/answer", requireAuth, async (req, res): Promise<voi
 });
 
 router.post("/interviews/:id/next-question", requireAuth, async (req, res): Promise<void> => {
+  if (!isDatabaseConfigured || !db) {
+  res.status(503).json({ error: "Database is not configured" });
+  return;
+}
   const user = getUser(req);
   const params = GetNextQuestionParams.safeParse(req.params);
   if (!params.success) {

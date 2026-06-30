@@ -3,3 +3,6 @@ node_modules
 dist
 .vite
 .DS_Store
+*.zip
+codebase.txt
+repomix*.xml
