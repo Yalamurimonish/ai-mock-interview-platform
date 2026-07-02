@@ -6,3 +6,5 @@ dist
 *.zip
 codebase.txt
 repomix*.xml
+
+*.tsbuildinfo
