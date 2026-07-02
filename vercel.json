@@ -1,5 +1,5 @@
 {
-  "outputDirectory": "dist/public",
+  "outputDirectory": "artifacts/interview-app/dist/public",
   "rewrites": [
     {
       "source": "/(.*)",
