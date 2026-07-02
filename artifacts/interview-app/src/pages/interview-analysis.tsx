@@ -70,15 +70,17 @@ export default function InterviewAnalysis() {
     );
   }
 
+  const interviewData = interview as any;
+
   const overallScore = analysis.overallScore;
   const scoreColor =
     overallScore >= 80 ? "text-emerald-500" : overallScore >= 60 ? "text-yellow-500" : "text-destructive";
 
-  const durationMin = interview.durationMinutes ?? Math.round((videoMetrics?.durationMs ?? 0) / 60000);
+  const durationMin =
+    interview.durationMinutes ?? Math.round((videoMetrics?.durationMs ?? 0) / 60000);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-5xl mx-auto">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" asChild>
           <Link href="/interviews">
@@ -102,7 +104,6 @@ export default function InterviewAnalysis() {
         )}
       </div>
 
-      {/* Score + summary row */}
       <div className="grid md:grid-cols-3 gap-6">
         <Card className="md:col-span-1 flex flex-col justify-center items-center p-6 text-center border-primary/20">
           <CardHeader className="p-0 mb-4">
@@ -129,7 +130,6 @@ export default function InterviewAnalysis() {
         </Card>
       </div>
 
-      {/* Strengths + improvements */}
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="border-emerald-500/20 bg-emerald-500/5">
           <CardHeader className="pb-3">
@@ -168,8 +168,7 @@ export default function InterviewAnalysis() {
         </Card>
       </div>
 
-      {/* AI Feedback Scores */}
-      {(interview.communicationScore || interview.technicalScore || interview.confidenceScore) && (
+      {(interviewData.communicationScore || interviewData.technicalScore || interviewData.confidenceScore) && (
         <Card className="border-primary/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -179,52 +178,23 @@ export default function InterviewAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-3 gap-4">
-              {interview.communicationScore !== null && (
-                <div className="rounded-xl border bg-card p-4 space-y-3">
-                  <div className="text-sm font-medium text-muted-foreground">Communication</div>
-                  <div className={`text-3xl font-bold tabular-nums tracking-tight ${
-                    interview.communicationScore >= 80 ? "text-emerald-500" : 
-                    interview.communicationScore >= 60 ? "text-blue-500" : 
-                    interview.communicationScore >= 40 ? "text-yellow-500" : "text-red-500"
-                  }`}>
-                    {Math.round(interview.communicationScore)}
-                  </div>
-                  <Progress value={interview.communicationScore} className="h-1.5" />
-                </div>
+              {interviewData.communicationScore !== null && interviewData.communicationScore !== undefined && (
+                <ScoreCard title="Communication" score={interviewData.communicationScore} />
               )}
-              {interview.technicalScore !== null && (
-                <div className="rounded-xl border bg-card p-4 space-y-3">
-                  <div className="text-sm font-medium text-muted-foreground">Technical</div>
-                  <div className={`text-3xl font-bold tabular-nums tracking-tight ${
-                    interview.technicalScore >= 80 ? "text-emerald-500" : 
-                    interview.technicalScore >= 60 ? "text-blue-500" : 
-                    interview.technicalScore >= 40 ? "text-yellow-500" : "text-red-500"
-                  }`}>
-                    {Math.round(interview.technicalScore)}
-                  </div>
-                  <Progress value={interview.technicalScore} className="h-1.5" />
-                </div>
+
+              {interviewData.technicalScore !== null && interviewData.technicalScore !== undefined && (
+                <ScoreCard title="Technical" score={interviewData.technicalScore} />
               )}
-              {interview.confidenceScore !== null && (
-                <div className="rounded-xl border bg-card p-4 space-y-3">
-                  <div className="text-sm font-medium text-muted-foreground">Confidence</div>
-                  <div className={`text-3xl font-bold tabular-nums tracking-tight ${
-                    interview.confidenceScore >= 80 ? "text-emerald-500" : 
-                    interview.confidenceScore >= 60 ? "text-blue-500" : 
-                    interview.confidenceScore >= 40 ? "text-yellow-500" : "text-red-500"
-                  }`}>
-                    {Math.round(interview.confidenceScore)}
-                  </div>
-                  <Progress value={interview.confidenceScore} className="h-1.5" />
-                </div>
+
+              {interviewData.confidenceScore !== null && interviewData.confidenceScore !== undefined && (
+                <ScoreCard title="Confidence" score={interviewData.confidenceScore} />
               )}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Improvement Tips */}
-      {interview.improvementTips && (
+      {interviewData.improvementTips && (
         <Card className="border-blue-500/20 bg-blue-500/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
@@ -232,12 +202,11 @@ export default function InterviewAnalysis() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-relaxed">{interview.improvementTips}</p>
+            <p className="text-sm leading-relaxed">{interviewData.improvementTips}</p>
           </CardContent>
         </Card>
       )}
 
-      {/* Skill breakdown */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -249,13 +218,16 @@ export default function InterviewAnalysis() {
           <div className="space-y-5">
             {analysis.skillScores.map((skill) => {
               const pct = (skill.score / skill.maxScore) * 100;
-              const barColor = pct >= 80 ? "bg-emerald-500" : pct >= 60 ? "bg-blue-500" : pct >= 40 ? "bg-yellow-500" : "bg-red-500";
+              const barColor =
+                pct >= 80 ? "bg-emerald-500" : pct >= 60 ? "bg-blue-500" : pct >= 40 ? "bg-yellow-500" : "bg-red-500";
+
               return (
                 <div key={skill.skill} className="space-y-1.5">
                   <div className="flex justify-between text-sm font-medium">
                     <span>{skill.skill}</span>
                     <span className="tabular-nums">
-                      {Math.round(skill.score)}<span className="text-muted-foreground font-normal"> / {skill.maxScore}</span>
+                      {Math.round(skill.score)}
+                      <span className="text-muted-foreground font-normal"> / {skill.maxScore}</span>
                     </span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -271,7 +243,6 @@ export default function InterviewAnalysis() {
         </CardContent>
       </Card>
 
-      {/* Video analysis section */}
       {videoMetrics && (
         <Card className="border-blue-500/20">
           <CardHeader>
@@ -287,7 +258,6 @@ export default function InterviewAnalysis() {
           </CardHeader>
           <CardContent>
             <div className="grid sm:grid-cols-3 gap-4">
-              {/* Face presence */}
               <VideoMetricCard
                 icon={<Video className="w-4 h-4" />}
                 title="Face Visible"
@@ -302,7 +272,6 @@ export default function InterviewAnalysis() {
                 showProgress={videoMetrics.facePresentPct > 0}
               />
 
-              {/* Eye contact */}
               <VideoMetricCard
                 icon={<Eye className="w-4 h-4" />}
                 title="Eye Contact"
@@ -317,7 +286,6 @@ export default function InterviewAnalysis() {
                 showProgress={videoMetrics.eyeContactPct > 0}
               />
 
-              {/* Look aways */}
               <VideoMetricCard
                 icon={<AlertTriangle className="w-4 h-4" />}
                 title="Look Aways"
@@ -327,8 +295,8 @@ export default function InterviewAnalysis() {
                     ? videoMetrics.lookAwayCount === 0
                       ? "No distractions"
                       : videoMetrics.lookAwayCount <= 3
-                      ? "Minimal distractions"
-                      : "Several distractions"
+                        ? "Minimal distractions"
+                        : "Several distractions"
                     : "Face detection unavailable"
                 }
                 colorClass={
@@ -336,8 +304,8 @@ export default function InterviewAnalysis() {
                     ? videoMetrics.lookAwayCount === 0
                       ? "text-emerald-500"
                       : videoMetrics.lookAwayCount <= 3
-                      ? "text-yellow-500"
-                      : "text-red-500"
+                        ? "text-yellow-500"
+                        : "text-red-500"
                     : "text-muted-foreground"
                 }
                 showProgress={false}
@@ -346,14 +314,14 @@ export default function InterviewAnalysis() {
 
             {videoMetrics.durationMs > 0 && (
               <p className="text-xs text-muted-foreground mt-4 text-center">
-                Camera was active for {Math.round(videoMetrics.durationMs / 60000)}m {Math.round((videoMetrics.durationMs % 60000) / 1000)}s
+                Camera was active for {Math.round(videoMetrics.durationMs / 60000)}m{" "}
+                {Math.round((videoMetrics.durationMs % 60000) / 1000)}s
               </p>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Detailed feedback */}
       {analysis.detailedFeedback && (
         <Card>
           <CardHeader>
@@ -367,7 +335,6 @@ export default function InterviewAnalysis() {
         </Card>
       )}
 
-      {/* CTA */}
       <div className="flex gap-3 pb-8">
         <Button variant="outline" asChild className="flex-1 sm:flex-none">
           <Link href="/interviews">View All Interviews</Link>
@@ -376,6 +343,28 @@ export default function InterviewAnalysis() {
           <Link href="/interviews/new">Start New Interview</Link>
         </Button>
       </div>
+    </div>
+  );
+}
+
+function ScoreCard({ title, score }: { title: string; score: number }) {
+  return (
+    <div className="rounded-xl border bg-card p-4 space-y-3">
+      <div className="text-sm font-medium text-muted-foreground">{title}</div>
+      <div
+        className={`text-3xl font-bold tabular-nums tracking-tight ${
+          score >= 80
+            ? "text-emerald-500"
+            : score >= 60
+              ? "text-blue-500"
+              : score >= 40
+                ? "text-yellow-500"
+                : "text-red-500"
+        }`}
+      >
+        {Math.round(score)}
+      </div>
+      <Progress value={score} className="h-1.5" />
     </div>
   );
 }
@@ -409,7 +398,13 @@ function VideoMetricCard({
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-700 ${
-              progress >= 80 ? "bg-emerald-500" : progress >= 60 ? "bg-blue-500" : progress >= 40 ? "bg-yellow-500" : "bg-red-500"
+              progress >= 80
+                ? "bg-emerald-500"
+                : progress >= 60
+                  ? "bg-blue-500"
+                  : progress >= 40
+                    ? "bg-yellow-500"
+                    : "bg-red-500"
             }`}
             style={{ width: `${progress}%` }}
           />

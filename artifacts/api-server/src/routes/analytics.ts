@@ -1,10 +1,15 @@
 import { Router, type IRouter } from "express";
-import { db, interviewsTable, questionsTable } from "@workspace/db";
+import { db as database, interviewsTable, questionsTable } from "@workspace/db";
 import { eq, and, desc, avg, count, sql } from "drizzle-orm";
 import { GetScoreTrendQueryParams } from "@workspace/api-zod";
 import { requireAuth, getUser } from "../lib/auth";
 
 const router: IRouter = Router();
+if (!database) {
+  throw new Error("Database connection is not initialized");
+}
+
+const db = database;
 
 router.get("/analytics/overview", requireAuth, async (req, res): Promise<void> => {
   const user = getUser(req);

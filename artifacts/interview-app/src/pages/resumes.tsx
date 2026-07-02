@@ -28,7 +28,7 @@ function formatBytes(bytes: number) {
 }
 
 function validateFile(file: File): string | null {
-  const valid = ACCEPTED_EXTENSIONS.some(ext => file.name.toLowerCase().endsWith(ext));
+  const valid = ACCEPTED_EXTENSIONS.some((ext) => file.name.toLowerCase().endsWith(ext));
   if (!valid) return "Only PDF, DOC, and DOCX files are supported.";
   if (file.size > MAX_SIZE_MB * 1024 * 1024) return `File must be under ${MAX_SIZE_MB}MB.`;
   return null;
@@ -55,10 +55,9 @@ export default function Resumes() {
       toast({ title: "Invalid file", description: error, variant: "destructive" });
       return;
     }
+
     setSelectedFile(file);
-    // Set name from filename without extension
     setResumeName(file.name.replace(/\.[^.]+$/, ""));
-    // Move to step 2: paste text
     setStep("text");
   }, [toast]);
 
@@ -75,13 +74,26 @@ export default function Resumes() {
     e.target.value = "";
   };
 
+  const resetForm = () => {
+    setIsUploading(false);
+    setStep("file");
+    setSelectedFile(null);
+    setResumeName("");
+    setContent("");
+  };
+
   const handleUpload = () => {
     if (!resumeName.trim()) {
       toast({ title: "Enter a resume name", variant: "destructive" });
       return;
     }
+
     if (!content.trim()) {
-      toast({ title: "Paste your resume text", description: "Copy the text from your PDF/DOC and paste it here.", variant: "destructive" });
+      toast({
+        title: "Paste your resume text",
+        description: "Copy the text from your PDF/DOC and paste it here.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -97,38 +109,36 @@ export default function Resumes() {
           queryClient.invalidateQueries({ queryKey: getListResumesQueryKey() });
         },
         onError: () => {
-          toast({ title: "Upload failed", description: "There was an error saving your resume.", variant: "destructive" });
+          toast({
+            title: "Upload failed",
+            description: "There was an error saving your resume.",
+            variant: "destructive",
+          });
         },
-      }
+      },
     );
   };
 
   const handleDelete = (id: number) => {
-    deleteResume.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "Resume deleted" });
-        queryClient.invalidateQueries({ queryKey: getListResumesQueryKey() });
+    deleteResume.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          toast({ title: "Resume deleted" });
+          queryClient.invalidateQueries({ queryKey: getListResumesQueryKey() });
+        },
       },
-    });
-  };
-
-  const resetForm = () => {
-    setIsUploading(false);
-    setStep("file");
-    setSelectedFile(null);
-    setResumeName("");
-    setContent("");
+    );
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Resumes</h1>
           <p className="text-muted-foreground">Upload your resume for context-aware AI interviews</p>
         </div>
+
         {!isUploading && (
           <Button onClick={() => setIsUploading(true)}>
             <Plus className="mr-2 w-4 h-4" /> Add Resume
@@ -136,7 +146,6 @@ export default function Resumes() {
         )}
       </div>
 
-      {/* Upload Card */}
       {isUploading && (
         <Card className="border-primary/40">
           <CardHeader className="pb-3">
@@ -147,30 +156,34 @@ export default function Resumes() {
                   {step === "file" ? "Select your resume file (PDF, DOC, DOCX)" : "Now paste your resume text content"}
                 </CardDescription>
               </div>
+
               <Button variant="ghost" size="icon" onClick={resetForm}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
-            {/* Step indicator */}
             <div className="flex items-center gap-2 mt-3">
-              <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full ${
-                step === "file" ? "bg-primary text-white" : "bg-green-500 text-white"
-              }`}>
+              <div
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full ${
+                  step === "file" ? "bg-primary text-white" : "bg-green-500 text-white"
+                }`}
+              >
                 {step === "file" ? "1" : <CheckCircle2 className="w-3 h-3" />} Select File
               </div>
+
               <ArrowRight className="w-3 h-3 text-muted-foreground" />
-              <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full ${
-                step === "text" ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-              }`}>
+
+              <div
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full ${
+                  step === "text" ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                }`}
+              >
                 2 Paste Text
               </div>
             </div>
           </CardHeader>
 
           <CardContent className="space-y-4">
-
-            {/* Step 1: File drop zone */}
             {step === "file" && (
               <>
                 <div
@@ -179,7 +192,10 @@ export default function Resumes() {
                       ? "border-primary bg-primary/10"
                       : "border-border hover:border-primary/50 hover:bg-muted/30"
                   }`}
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={onDrop}
                   onClick={() => fileInputRef.current?.click()}
@@ -191,22 +207,29 @@ export default function Resumes() {
                     onChange={onInputChange}
                     className="hidden"
                   />
-                  <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
-                    isDragging ? "bg-primary text-white" : "bg-primary/10 text-primary"
-                  }`}>
+
+                  <div
+                    className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
+                      isDragging ? "bg-primary text-white" : "bg-primary/10 text-primary"
+                    }`}
+                  >
                     <Upload className="w-8 h-8" />
                   </div>
+
                   <h3 className="font-semibold text-lg mb-1">
                     {isDragging ? "Drop it here!" : "Drag & drop your resume"}
                   </h3>
+
                   <p className="text-muted-foreground text-sm mb-4">or click to browse files</p>
+
                   <div className="flex justify-center gap-2">
-                    {["PDF", "DOC", "DOCX"].map(ext => (
+                    {["PDF", "DOC", "DOCX"].map((ext) => (
                       <Badge key={ext} variant="outline" className="font-mono">
                         .{ext.toLowerCase()}
                       </Badge>
                     ))}
                   </div>
+
                   <p className="text-xs text-muted-foreground mt-3">Max {MAX_SIZE_MB}MB</p>
                 </div>
 
@@ -225,7 +248,6 @@ export default function Resumes() {
               </>
             )}
 
-            {/* Step 2: Paste text */}
             {step === "text" && (
               <>
                 {selectedFile && (
@@ -233,26 +255,39 @@ export default function Resumes() {
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
                       <File className="w-5 h-5" />
                     </div>
+
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{selectedFile.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant="outline" className="text-[10px] font-mono">{getFileExt(selectedFile.name)}</Badge>
+                        <Badge variant="outline" className="text-[10px] font-mono">
+                          {getFileExt(selectedFile.name)}
+                        </Badge>
                         <span className="text-xs text-muted-foreground">{formatBytes(selectedFile.size)}</span>
                       </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => { setSelectedFile(null); setStep("file"); }}>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setStep("file");
+                      }}
+                    >
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
                 )}
 
                 <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-                  <p className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-1">📋 How to paste your resume text:</p>
+                  <p className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-1">
+                    📋 How to paste your resume text:
+                  </p>
                   <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                     <li>Open your PDF or DOC file</li>
-                    <li>Press <kbd className="px-1 py-0.5 rounded bg-muted border text-xs">Ctrl+A</kbd> to select all text</li>
-                    <li>Press <kbd className="px-1 py-0.5 rounded bg-muted border text-xs">Ctrl+C</kbd> to copy</li>
-                    <li>Paste below with <kbd className="px-1 py-0.5 rounded bg-muted border text-xs">Ctrl+V</kbd></li>
+                    <li>Press Ctrl+A to select all text</li>
+                    <li>Press Ctrl+C to copy</li>
+                    <li>Paste below with Ctrl+V</li>
                   </ol>
                 </div>
 
@@ -266,7 +301,10 @@ export default function Resumes() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Resume Text Content <span className="text-red-500">*</span></Label>
+                  <Label>
+                    Resume Text Content <span className="text-red-500">*</span>
+                  </Label>
+
                   <Textarea
                     placeholder="Paste your resume text here (Ctrl+V)..."
                     className="min-h-[220px] font-mono text-sm"
@@ -274,6 +312,7 @@ export default function Resumes() {
                     onChange={(e) => setContent(e.target.value)}
                     autoFocus
                   />
+
                   {content && (
                     <p className="text-xs text-muted-foreground">
                       {content.length} characters · ~{content.trim().split(/\s+/).length} words
@@ -285,14 +324,22 @@ export default function Resumes() {
                   <Button variant="outline" onClick={() => setStep("file")}>
                     ← Back
                   </Button>
+
                   <div className="flex gap-2">
-                    <Button variant="ghost" onClick={resetForm}>Cancel</Button>
+                    <Button variant="ghost" onClick={resetForm}>
+                      Cancel
+                    </Button>
+
                     <Button
                       onClick={handleUpload}
                       disabled={uploadResume.isPending || !resumeName.trim() || !content.trim()}
                     >
-                      {uploadResume.isPending ? "Saving..." : (
-                        <><CheckCircle2 className="w-4 h-4 mr-2" /> Save Resume</>
+                      {uploadResume.isPending ? (
+                        "Saving..."
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-2" /> Save Resume
+                        </>
                       )}
                     </Button>
                   </div>
@@ -303,81 +350,106 @@ export default function Resumes() {
         </Card>
       )}
 
-      {/* Resume List */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
-          <><Skeleton className="h-48 w-full" /><Skeleton className="h-48 w-full" /></>
+          <>
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </>
         ) : resumes?.length === 0 ? (
           <div className="col-span-full py-16 text-center border-2 border-dashed rounded-2xl bg-muted/10">
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
               <FileText className="w-8 h-8 text-muted-foreground/50" />
             </div>
+
             <h3 className="text-lg font-semibold mb-1">No resumes yet</h3>
+
             <p className="text-muted-foreground text-sm mb-4 max-w-sm mx-auto">
               Upload your resume to get personalized AI interview questions and ATS score.
             </p>
+
             <Button onClick={() => setIsUploading(true)}>
               <Upload className="w-4 h-4 mr-2" /> Upload Resume
             </Button>
           </div>
         ) : (
-          resumes?.map((resume) => (
-            <Card key={resume.id} className={`hover:shadow-md transition-all ${resume.isActive ? "border-primary shadow-sm" : ""}`}>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                      <FileText className="w-5 h-5" />
+          resumes?.map((resume) => {
+            const resumeData = resume as any;
+
+            return (
+              <Card
+                key={resume.id}
+                className={`hover:shadow-md transition-all ${resume.isActive ? "border-primary shadow-sm" : ""}`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <CardTitle className="text-base truncate">{resume.filename}</CardTitle>
+                        <CardDescription className="text-xs">
+                          {format(new Date(resume.uploadedAt), "MMM d, yyyy")}
+                        </CardDescription>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <CardTitle className="text-base truncate">{resume.filename}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {format(new Date(resume.uploadedAt), "MMM d, yyyy")}
-                      </CardDescription>
-                    </div>
+
+                    {resume.isActive && (
+                      <Badge className="bg-primary/10 text-primary border-0 flex-shrink-0">
+                        <CheckCircle2 className="w-3 h-3 mr-1" /> Active
+                      </Badge>
+                    )}
                   </div>
-                  {resume.isActive && (
-                    <Badge className="bg-primary/10 text-primary border-0 flex-shrink-0">
-                      <CheckCircle2 className="w-3 h-3 mr-1" /> Active
-                    </Badge>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  <Badge variant="outline" className="font-mono text-xs">
+                    <FileType className="w-3 h-3 mr-1" />
+                    {getFileExt(resume.filename)}
+                  </Badge>
+
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">
+                      {resume.parsedSkills ? `${resume.parsedSkills.split(",").length} skills detected` : "No skills parsed yet"}
+                    </span>
+
+                    {resumeData.resumeScore && (
+                      <span className="font-semibold text-primary">
+                        Score: {resumeData.resumeScore}/100
+                      </span>
+                    )}
+                  </div>
+
+                  {resumeData.missingSkills && (
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-orange-500">Missing: </span>
+                      {resumeData.missingSkills}
+                    </p>
                   )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Badge variant="outline" className="font-mono text-xs">
-                  <FileType className="w-3 h-3 mr-1" />
-                  {getFileExt(resume.filename)}
-                </Badge>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">
-                    {resume.parsedSkills ? `${resume.parsedSkills.split(",").length} skills detected` : "No skills parsed yet"}
-                  </span>
-                  {resume.resumeScore && (
-                    <span className="font-semibold text-primary">Score: {resume.resumeScore}/100</span>
+
+                  {resumeData.improvementSuggestions && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      <span className="font-medium">Tips: </span>
+                      {resumeData.improvementSuggestions}
+                    </p>
                   )}
-                </div>
-                {resume.missingSkills && (
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-medium text-orange-500">Missing: </span>{resume.missingSkills}
-                  </p>
-                )}
-                {resume.improvementSuggestions && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    <span className="font-medium">Tips: </span>{resume.improvementSuggestions}
-                  </p>
-                )}
-                <div className="flex justify-end pt-1">
-                  <Button
-                    variant="ghost" size="icon"
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(resume.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+
+                  <div className="flex justify-end pt-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(resume.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>

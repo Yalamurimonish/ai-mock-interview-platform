@@ -118,6 +118,9 @@ export function devCreateResume(
   filename: string,
   content: string,
   parsedSkills: string,
+  resumeScore: number | null = null,
+  missingSkills: string | null = null,
+  improvementSuggestions: string | null = null,
 ) {
   for (const r of resumes) {
     if (r.userId === userId) r.isActive = false;
@@ -130,9 +133,9 @@ export function devCreateResume(
     parsedSkills,
     isActive: true,
     uploadedAt: now(),
-    resumeScore: null,
-    missingSkills: null,
-    improvementSuggestions: null,
+    resumeScore,
+    missingSkills,
+    improvementSuggestions,
   };
   resumes.push(resume);
   return resume;
@@ -211,15 +214,56 @@ export function devStartInterview(userId: number, id: number) {
   const interview = devGetInterview(userId, id);
   if (!interview) return null;
 
-  const fallbackTypes = ["technical", "behavioral", "situational"] as const;
+  if (questions.some((q) => q.interviewId === interview.id)) {
+    interview.status = "in_progress";
+    interview.startedAt = interview.startedAt ?? now();
+    return interview;
+  }
+
+  const pools = {
+    behavioral: [
+      "Tell me about yourself and your relevant experience for this role.",
+      "Describe a project you are proud of and your contribution to it.",
+      "Tell me about a time you handled pressure or a deadline.",
+    ],
+    technical: [
+      "Explain JWT authentication and how protected routes work.",
+      "How would you optimize a slow API response?",
+      "Explain how frontend and backend communicate in this application.",
+    ],
+    coding: [
+      "How would you detect duplicates in a large array efficiently?",
+      "How would you implement pagination for many database records?",
+      "How would you validate user input before saving it?",
+    ],
+    situational: [
+      "A feature works locally but fails after deployment. How would you debug it?",
+      "Your frontend cannot reach the backend API. What steps would you take?",
+      "How would you handle unclear requirements from a stakeholder?",
+    ],
+    system_design: [
+      "Design an AI mock interview platform with authentication, interviews, and analytics.",
+      "Design a resume ATS scoring system at a high level.",
+      "Design a scalable question generation service.",
+    ],
+    resume_based: [
+      "Walk me through one resume project and explain your design decisions.",
+      "What was the biggest technical challenge in your resume project?",
+      "How would you improve one project from your resume?",
+    ],
+  };
+  const plan = ["behavioral", "technical", "coding", "situational", "system_design", "resume_based"] as const;
+
   for (let i = 0; i < interview.questionCount; i++) {
+    const type = plan[i % plan.length];
+    const pool = pools[type];
     questions.push({
       id: questionIdSeq++,
       interviewId: interview.id,
-      text: `Tell me about your experience with ${interview.type === "technical" ? "coding and problem solving" : "working in teams"} (question ${i + 1}).`,
-      type: fallbackTypes[i % 3],
+      text: pool[Math.floor(i / plan.length) % pool.length],
+      type,
       orderIndex: i,
-      hint: null,
+      hint: "Use context, action, technical details, and result.",
       userAnswer: null,
       score: null,
       feedback: null,

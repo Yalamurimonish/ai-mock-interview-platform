@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import {
-  db,
-  isDatabaseConfigured,
+  db as database,
   interviewsTable,
   questionsTable,
   resumesTable,
@@ -22,74 +21,14 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, getUser } from "../lib/auth";
 import { generateInterviewQuestions, evaluateAnswer, generateInterviewAnalysis } from "../lib/ai";
-import Anthropic from "@anthropic-ai/sdk";
 
 const router: IRouter = Router();
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-});
-
-async function generateAIFeedbackScores(questions: Array<{ text: string; userAnswer: string | null; score: number | null }>) {
-  try {
-    const answeredQuestions = questions.filter(q => q.userAnswer && q.score !== null);
-    if (answeredQuestions.length === 0) {
-      return { communicationScore: 70, technicalScore: 70, confidenceScore: 70, improvementTips: "Complete more interviews for detailed feedback." };
-    }
-
-    const questionsText = answeredQuestions.map((q, i) => 
-      `Q${i + 1}: ${q.text}\nA: ${q.userAnswer}\nScore: ${q.score}`
-    ).join("\n\n");
-
-    const message = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: `Analyze these interview Q&A pairs and provide:
-1. Communication score (0-100) based on clarity, articulation, and structure
-2. Technical score (0-100) based on technical accuracy and depth
-3. Confidence score (0-100) based on certainty and composure
-4. 2-3 specific improvement tips
-
-Interview Q&A:
-${questionsText}
-
-Respond in JSON format with this structure:
-{
-  "communicationScore": number,
-  "technicalScore": number,
-  "confidenceScore": number,
-  "improvementTips": string
-}`,
-        },
-      ],
-    });
-
-    const responseText = message.content[0].type === "text" ? message.content[0].text : "";
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    
-    return {
-      communicationScore: 75,
-      technicalScore: 75,
-      confidenceScore: 75,
-      improvementTips: "Good performance overall. Focus on being more specific in your answers.",
-    };
-  } catch (error) {
-    console.error("AI feedback generation failed:", error);
-    return {
-      communicationScore: 70,
-      technicalScore: 70,
-      confidenceScore: 70,
-      improvementTips: "Unable to generate AI feedback. Please try again later.",
-    };
-  }
+if (!database) {
+  throw new Error("Database connection is not initialized");
 }
+
+const db = database;
 
 function serializeInterview(i: typeof interviewsTable.$inferSelect) {
   return {
@@ -115,13 +54,33 @@ function serializeInterview(i: typeof interviewsTable.$inferSelect) {
   };
 }
 
-router.get("/interviews", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({
-    error: "Database is not configured",
-  });
-  return;
+async function generateAIFeedbackScores(
+  questions: Array<{ text: string; userAnswer: string | null; score: number | null }>,
+) {
+  const answeredQuestions = questions.filter((q) => q.userAnswer && q.score !== null);
+
+  if (answeredQuestions.length === 0) {
+    return {
+      communicationScore: 70,
+      technicalScore: 70,
+      confidenceScore: 70,
+      improvementTips: "Complete more interviews for detailed feedback.",
+    };
+  }
+
+  const averageScore =
+    answeredQuestions.reduce((sum, q) => sum + (q.score ?? 0), 0) / answeredQuestions.length;
+
+  return {
+    communicationScore: Math.min(100, Math.max(40, Math.round(averageScore + 5))),
+    technicalScore: Math.min(100, Math.max(40, Math.round(averageScore))),
+    confidenceScore: Math.min(100, Math.max(40, Math.round(averageScore - 3))),
+    improvementTips:
+      "Use structured answers, include specific examples, explain your decision-making clearly, and quantify the impact of your work.",
+  };
 }
+
+router.get("/interviews", requireAuth, async (req, res): Promise<void> => {
   const user = getUser(req);
   const queryParams = ListInterviewsQueryParams.safeParse(req.query);
 
@@ -147,28 +106,29 @@ router.get("/interviews", requireAuth, async (req, res): Promise<void> => {
 
 router.get("/interviews/recent", requireAuth, async (req, res): Promise<void> => {
   const user = getUser(req);
+
   const interviews = await db
     .select()
     .from(interviewsTable)
     .where(eq(interviewsTable.userId, user.id))
     .orderBy(desc(interviewsTable.createdAt))
     .limit(5);
+
   res.json(interviews.map(serializeInterview));
 });
 
 router.post("/interviews", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const parsed = CreateInterviewBody.safeParse(req.body);
+
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
 
   const { title, type, difficulty, targetRole, questionCount = 5, resumeId } = parsed.data;
+
+  const safeQuestionCount = Math.max(3, Math.min(questionCount, 20));
 
   const [interview] = await db
     .insert(interviewsTable)
@@ -179,7 +139,7 @@ router.post("/interviews", requireAuth, async (req, res): Promise<void> => {
       difficulty,
       status: "pending",
       targetRole: targetRole ?? null,
-      questionCount,
+      questionCount: safeQuestionCount,
       answeredCount: 0,
       resumeId: resumeId ?? null,
     })
@@ -189,12 +149,9 @@ router.post("/interviews", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/interviews/:id", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const params = GetInterviewParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
@@ -214,15 +171,12 @@ router.get("/interviews/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.delete("/interviews/:id", requireAuth, async (req, res): Promise<void> => {
-
   const user = getUser(req);
   const params = DeleteInterviewParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
-    return;if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
+    return;
   }
 
   const [interview] = await db
@@ -239,12 +193,9 @@ router.delete("/interviews/:id", requireAuth, async (req, res): Promise<void> =>
 });
 
 router.post("/interviews/:id/start", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const params = StartInterviewParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
@@ -260,51 +211,50 @@ router.post("/interviews/:id/start", requireAuth, async (req, res): Promise<void
     return;
   }
 
-  // Get resume content if attached
-  let resumeContent: string | null = null;
-  if (interview.resumeId) {
-    const [resume] = await db.select().from(resumesTable).where(eq(resumesTable.id, interview.resumeId));
-    resumeContent = resume?.content ?? null;
-  }
+  const existingQuestions = await db
+    .select()
+    .from(questionsTable)
+    .where(eq(questionsTable.interviewId, interview.id))
+    .orderBy(questionsTable.orderIndex);
 
-  // Generate questions with AI
-  try {
+  if (existingQuestions.length === 0) {
+    let resumeContent: string | null = null;
+
+    if (interview.resumeId) {
+      const [resume] = await db
+        .select()
+        .from(resumesTable)
+        .where(eq(resumesTable.id, interview.resumeId));
+
+      resumeContent = resume?.content ?? null;
+    }
+
     const generatedQuestions = await generateInterviewQuestions(
       interview.type,
       interview.difficulty,
       interview.targetRole,
       interview.questionCount,
-      resumeContent
+      resumeContent,
     );
 
     await db.insert(questionsTable).values(
-      generatedQuestions.map((q, i) => ({
+      generatedQuestions.map((q, index) => ({
         interviewId: interview.id,
         text: q.text,
         type: q.type,
-        orderIndex: i,
+        orderIndex: index,
         hint: q.hint ?? null,
         isAnswered: false,
-      }))
-    );
-  } catch (err) {
-    req.log.error({ err }, "Failed to generate questions, using fallback");
-    // Insert fallback questions
-    const fallbackTypes = ["technical", "behavioral", "situational"] as const;
-    await db.insert(questionsTable).values(
-      Array.from({ length: interview.questionCount }, (_, i) => ({
-        interviewId: interview.id,
-        text: `Tell me about your experience with ${interview.type === "technical" ? "coding and problem solving" : "working in teams"} (question ${i + 1}).`,
-        type: fallbackTypes[i % 3],
-        orderIndex: i,
-        isAnswered: false,
-      }))
+      })),
     );
   }
 
   const [updated] = await db
     .update(interviewsTable)
-    .set({ status: "in_progress", startedAt: new Date() })
+    .set({
+      status: "in_progress",
+      startedAt: interview.startedAt ?? new Date(),
+    })
     .where(eq(interviewsTable.id, interview.id))
     .returning();
 
@@ -312,12 +262,9 @@ router.post("/interviews/:id/start", requireAuth, async (req, res): Promise<void
 });
 
 router.post("/interviews/:id/complete", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const params = CompleteInterviewParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
@@ -345,12 +292,14 @@ router.post("/interviews/:id/complete", requireAuth, async (req, res): Promise<v
       : 0;
 
   const startedAt = interview.startedAt ?? new Date();
-  const durationMs = Date.now() - startedAt.getTime();
-  const durationMinutes = Math.round(durationMs / 60000);
+  const durationMinutes = Math.max(1, Math.round((Date.now() - startedAt.getTime()) / 60000));
 
-  // Generate AI feedback scores
   const aiFeedback = await generateAIFeedbackScores(
-    questions.map(q => ({ text: q.text, userAnswer: q.userAnswer, score: q.score }))
+    questions.map((q) => ({
+      text: q.text,
+      userAnswer: q.userAnswer,
+      score: q.score,
+    })),
   );
 
   const [updated] = await db
@@ -373,12 +322,9 @@ router.post("/interviews/:id/complete", requireAuth, async (req, res): Promise<v
 });
 
 router.get("/interviews/:id/analysis", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const params = GetInterviewAnalysisParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
@@ -397,7 +343,8 @@ router.get("/interviews/:id/analysis", requireAuth, async (req, res): Promise<vo
   const questions = await db
     .select()
     .from(questionsTable)
-    .where(eq(questionsTable.interviewId, interview.id));
+    .where(eq(questionsTable.interviewId, interview.id))
+    .orderBy(questionsTable.orderIndex);
 
   const analysis = await generateInterviewAnalysis(
     questions.map((q) => ({
@@ -405,7 +352,7 @@ router.get("/interviews/:id/analysis", requireAuth, async (req, res): Promise<vo
       userAnswer: q.userAnswer,
       score: q.score,
       type: q.type,
-    }))
+    })),
   );
 
   res.json({
@@ -415,14 +362,10 @@ router.get("/interviews/:id/analysis", requireAuth, async (req, res): Promise<vo
   });
 });
 
-// Questions
 router.get("/interviews/:id/questions", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const params = ListInterviewQuestionsParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
@@ -448,18 +391,16 @@ router.get("/interviews/:id/questions", requireAuth, async (req, res): Promise<v
 });
 
 router.post("/interviews/:id/answer", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const params = SubmitAnswerParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;
   }
 
   const body = SubmitAnswerBody.safeParse(req.body);
+
   if (!body.success) {
     res.status(400).json({ error: body.error.message });
     return;
@@ -485,7 +426,13 @@ router.post("/interviews/:id/answer", requireAuth, async (req, res): Promise<voi
     return;
   }
 
-  let evaluation = { score: 70, feedback: "Good answer.", strengths: ["Clear"], improvements: ["More detail"] };
+  let evaluation = {
+    score: 70,
+    feedback: "Good answer. Try to add more examples and structure.",
+    strengths: ["Clear attempt"],
+    improvements: ["Add more detail"],
+  };
+
   try {
     evaluation = await evaluateAnswer(question.text, body.data.answer, interview.difficulty, question.type);
   } catch (err) {
@@ -504,7 +451,6 @@ router.post("/interviews/:id/answer", requireAuth, async (req, res): Promise<voi
     })
     .where(eq(questionsTable.id, question.id));
 
-  // Update answered count
   const answeredQuestions = await db
     .select()
     .from(questionsTable)
@@ -525,12 +471,9 @@ router.post("/interviews/:id/answer", requireAuth, async (req, res): Promise<voi
 });
 
 router.post("/interviews/:id/next-question", requireAuth, async (req, res): Promise<void> => {
-  if (!isDatabaseConfigured || !db) {
-  res.status(503).json({ error: "Database is not configured" });
-  return;
-}
   const user = getUser(req);
   const params = GetNextQuestionParams.safeParse(req.params);
+
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
     return;

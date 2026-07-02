@@ -101,8 +101,8 @@ export default function InterviewNew() {
         data: {
           ...data,
           title,
-          difficulty: selectedDifficulty,
-          type: selectedType || data.type,
+          difficulty: selectedDifficulty as any,
+          type: (selectedType || data.type) as any,
           resumeId: data.resumeId || undefined,
         },
       },
